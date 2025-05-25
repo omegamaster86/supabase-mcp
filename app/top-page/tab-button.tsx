@@ -10,14 +10,7 @@ const TabButton: React.FC<TabButtonProps> = ({ active, onClick, children }) => {
 	return (
 		<button
 			type="button"
-			style={{
-				flex: 1,
-				padding: "1rem",
-				background: active ? "#e0e0e0" : "white",
-				border: "none",
-				borderBottom: active ? "2px solid #1976d2" : "none",
-				cursor: "pointer",
-			}}
+			className={`flex-1 p-2 cursor-pointer ${active ? "bg-blue-50" : "bg-white"}`}
 			onClick={onClick}
 		>
 			{children}
