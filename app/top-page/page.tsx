@@ -3,8 +3,8 @@ import Footer from "@/components/footer/page";
 import React, { useState } from "react";
 import TabButton from "./tab-button";
 import Header from "@/components/header/page";
+import ExerciseComponent from "./exercise-component";
 
-const ExerciseComponent = () => <div>演習問題コンポーネント</div>;
 const StudyRecordComponent = () => <div>学習記録コンポーネント</div>;
 
 const Page = () => {
