@@ -32,8 +32,8 @@ export default function RootLayout({
 					enableSystem
 					disableTransitionOnChange
 				>
-					<main className="min-h-screen flex flex-col items-center">
-						<div className="flex flex-col gap-20 max-w-5xl p-5">{children}</div>
+					<main className="min-h-screen max-w-5xl mx-auto flex flex-col items-center p-5">
+						{children}
 					</main>
 				</ThemeProvider>
 			</body>
