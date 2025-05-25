@@ -25,7 +25,7 @@ const SelectField = ({
 			value={value}
 			onChange={(e) => onChange(e.target.value)}
 			disabled={disabled}
-			className="w-4/6 border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100"
+			className="w-4/6 border rounded px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100"
 		>
 			<option value="">選択してください</option>
 			{options.map((opt) => (
@@ -389,13 +389,15 @@ const ExerciseComponent = () => {
 			{mondaiFormatType === "多肢択一" && (
 				<FilterRadio value={filterType} onChange={setFilterType} />
 			)}
-			<button
-				type="button"
-				disabled={!canStart}
-				className="mt-4 px-8 py-2 font-bold rounded bg-blue-600 text-white disabled:bg-gray-300"
-			>
-				テストを開始
-			</button>
+			<div className="flex justify-center items-center">
+				<button
+					type="button"
+					disabled={!canStart}
+					className="mt-4 px-8 py-2 font-bold rounded-full bg-blue-600 text-white disabled:bg-gray-300"
+				>
+					テストを開始
+				</button>
+			</div>
 		</div>
 	);
 };
