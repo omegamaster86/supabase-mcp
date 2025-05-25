@@ -1,0 +1,25 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+#top-pageの画面設計書です
+
+#画面イメージ図
+https://www.figma.com/design/nf7QSvlJ1U9gHwUheWcIMX/%E6%B3%95%E5%AD%A6%E9%A4%A8_%E5%A4%9A%E8%82%A2%E6%8A%9E%E4%B8%80?node-id=492-3979&t=7ejaQ4v9Z2GxIYFj-1
+
+#画面設計図
+1. ヘッダー
+2. タブ
+    1. 「問題演習」
+    2. 「学習記録」
+3. タブ内容
+    1. 「演習問題」選択時
+      演習問題コンポーネントを使用
+    2. 「学習記録」選択時
+      学習記録コンポーネントを使用
+4. フッター
+    ログアウト
+    利用規約
+    特定取引に関する法律に基づく表記
+    プライバシーポリシー
