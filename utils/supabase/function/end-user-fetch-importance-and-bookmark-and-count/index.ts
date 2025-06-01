@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "@/utils/supabase/server";
-import  { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 // CORS対策
 const allowedOrigin = process.env.ALLOWED_ORIGIN ?? "*";
@@ -57,9 +57,11 @@ export async function POST(req: NextRequest) {
 				},
 			},
 		);
-	} catch (err: any) {
+	} catch (err: unknown) {
+		const errorMessage =
+			err instanceof Error ? err.message : "Unknown error occurred";
 		return NextResponse.json(
-			{ error: err.message },
+			{ error: errorMessage },
 			{
 				status: 500,
 				headers: {
