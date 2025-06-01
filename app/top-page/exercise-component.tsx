@@ -1,23 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import BookmarkSwitch from "./_components/bookmark-switch";
 import Dropdown from "./_components/dropdown";
 import FilterRadio from "./_components/filter-radio";
 
-const API = {
-	fetchInitial: async () => {
-		return {
-			tests: ["25中小企業診断士", "25社会保険労務士"],
-			mondaiFormatTypes: ["一問一答", "多肢択一"],
-		};
-	},
-};
-
 const ExerciseComponent = () => {
 	// 状態変数
 	const [isLoading, setIsLoading] = useState(false);
-	const [tests, setTests] = useState<string[]>([]);
+	const [tests, setTests] = useState<string[]>([
+		"25中小企業診断士",
+		"25社会保険労務士",
+	]);
 	const [test, setTest] = useState("");
-	const [mondaiFormatTypes, setMondaiFormatTypes] = useState<string[]>([]);
+	const [mondaiFormatTypes, setMondaiFormatTypes] = useState<string[]>([
+		"一問一答",
+		"多肢択一",
+	]);
 	const [mondaiFormatType, setMondaiFormatType] = useState("");
 	const [subjects, setSubjects] = useState<string[]>([]);
 	const [subject, setSubject] = useState("");
@@ -33,73 +30,77 @@ const ExerciseComponent = () => {
 	const [bookmarkOnly, setBookmarkOnly] = useState(false);
 	const [filterType, setFilterType] = useState("noFilter");
 
-	// fetchOnSelect関数をコンポーネント内に移動
-	const fetchOnSelect = async (params: Record<string, string | boolean>) => {
-		try {
-			const response = await fetch(
-				"/utils/supabase/function/end-user-fetch-importance-and-bookmark-and-count",
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
+	// API呼び出し関数
+	const fetchOnSelect = useCallback(
+		async (params: Record<string, string | boolean> = {}) => {
+			try {
+				const response = await fetch(
+					"/api/end-user-fetch-importance-and-bookmark-and-count",
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							supabaseAuthUserId: "2d9796fb-7d50-4c82-9a70-0d3046691731",
+							testYearAndType: params.test || test || null,
+							mondaiFormatType:
+								params.mondaiFormatType || mondaiFormatType || null,
+							subject: params.subject || subject || null,
+							chapter: params.chapter || chapter || null,
+							category: params.category || category || null,
+							importanceType: params.importance || importance || null,
+							calledFrom: "exercise-component",
+							bookmark: params.bookmarkOnly || bookmarkOnly || false,
+						}),
 					},
-					body: JSON.stringify({
-						testYearAndType: params.test || test || null,
-						mondaiFormatType:
-							params.mondaiFormatType || mondaiFormatType || null,
-						subject: params.subject || subject || null,
-						chapter: params.chapter || chapter || null,
-						category: params.category || category || null,
-						importanceType: params.importance || importance || null,
-						calledFrom: "exercise-component",
-						bookmark: params.bookmarkOnly || bookmarkOnly || false,
-					}),
-				},
-			);
+				);
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				const result = await response.json();
+
+				if (result.error) {
+					throw new Error(result.error);
+				}
+
+				const data = result.data;
+				return {
+					tests: data.tests || [],
+					mondaiFormatTypes: data.mondai_format_types || [],
+					subjects: data.subjects || [],
+					chapters: data.chapters || [],
+					categories: data.categories || [],
+					importances: data.importances || [],
+					mondaiCounts: data.mondai_counts || [],
+					bookMarkActive: data.bookmark_active !== false,
+				};
+			} catch (error) {
+				console.error("fetchOnSelect error:", error);
+				return {
+					tests: [],
+					mondaiFormatTypes: [],
+					subjects: [],
+					chapters: [],
+					categories: [],
+					importances: [],
+					mondaiCounts: [],
+					bookMarkActive: false,
+				};
 			}
-
-			const result = await response.json();
-
-			if (result.error) {
-				throw new Error(result.error);
-			}
-
-			// Supabase関数からのレスポンスを適切な形式に変換
-			const data = result.data;
-			return {
-				mondaiFormatTypes: data.mondai_format_types || [],
-				subjects: data.subjects || [],
-				chapters: data.chapters || [],
-				categories: data.categories || [],
-				importances: data.importances || [],
-				mondaiCounts: data.mondai_counts || [],
-				bookMarkActive: data.bookmark_active !== false,
-			};
-		} catch (error) {
-			console.error("fetchOnSelect error:", error);
-			// エラー時はデフォルト値を返す
-			return {
-				mondaiFormatTypes: [],
-				subjects: [],
-				chapters: [],
-				categories: [],
-				importances: [],
-				mondaiCounts: [],
-				bookMarkActive: false,
-			};
-		}
-	};
-
-	// 初期表示API
-	React.useEffect(() => {
-		API.fetchInitial().then((res) => {
-			setTests(res.tests);
-			setMondaiFormatTypes(res.mondaiFormatTypes);
-		});
-	}, []);
+		},
+		[
+			test,
+			mondaiFormatType,
+			subject,
+			chapter,
+			category,
+			importance,
+			bookmarkOnly,
+		],
+	);
 
 	// ドロップダウンの活性/非活性制御
 	const isFormatDisabled = !test;
@@ -125,6 +126,7 @@ const ExerciseComponent = () => {
 		setBookmarkOnly(false);
 		setIsLoading(true);
 		const res = await fetchOnSelect({ test: v });
+		setTests(res.tests);
 		setMondaiFormatTypes(res.mondaiFormatTypes);
 		setSubjects(res.subjects);
 		setChapters(res.chapters);
@@ -134,6 +136,7 @@ const ExerciseComponent = () => {
 		setBookMarkActive(res.bookMarkActive);
 		setIsLoading(false);
 	};
+
 	const handleMondaiFormatTypeChange = async (v: string) => {
 		setMondaiFormatType(v);
 		setSubject("");
@@ -144,6 +147,8 @@ const ExerciseComponent = () => {
 		setBookmarkOnly(false);
 		setIsLoading(true);
 		const res = await fetchOnSelect({ test, mondaiFormatType: v });
+		setTests(res.tests);
+		setMondaiFormatTypes(res.mondaiFormatTypes);
 		setSubjects(res.subjects);
 		setChapters(res.chapters);
 		setCategories(res.categories);
@@ -152,6 +157,7 @@ const ExerciseComponent = () => {
 		setBookMarkActive(res.bookMarkActive);
 		setIsLoading(false);
 	};
+
 	const handleSubjectChange = async (v: string) => {
 		setSubject(v);
 		setChapter("");
@@ -168,6 +174,7 @@ const ExerciseComponent = () => {
 		setBookMarkActive(res.bookMarkActive);
 		setIsLoading(false);
 	};
+
 	const handleChapterChange = async (v: string) => {
 		setChapter(v);
 		setCategory("");
@@ -187,6 +194,7 @@ const ExerciseComponent = () => {
 		setBookMarkActive(res.bookMarkActive);
 		setIsLoading(false);
 	};
+
 	const handleCategoryChange = async (v: string) => {
 		setCategory(v);
 		setImportance("");
@@ -205,6 +213,7 @@ const ExerciseComponent = () => {
 		setBookMarkActive(res.bookMarkActive);
 		setIsLoading(false);
 	};
+
 	const handleImportanceChange = async (v: string) => {
 		setImportance(v);
 		setMondaiCount("");
@@ -222,6 +231,7 @@ const ExerciseComponent = () => {
 		setBookMarkActive(res.bookMarkActive);
 		setIsLoading(false);
 	};
+
 	const handleBookmarkChange = async (v: boolean) => {
 		setBookmarkOnly(v);
 		setMondaiCount("");
