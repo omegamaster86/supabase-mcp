@@ -1,8 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "@/utils/supabase/server";
+import  { type NextRequest, NextResponse } from "next/server";
 
 // CORS対策
-const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN");
+const allowedOrigin = process.env.ALLOWED_ORIGIN ?? "*";
 const optionalResponse = (optionalBody: string, optionalStatus: number) => {
   return new Response(optionalBody, {
     headers: {
