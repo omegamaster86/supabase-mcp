@@ -1,0 +1,85 @@
+import { createClient } from "@/utils/supabase/server";
+import { type NextRequest, NextResponse } from "next/server";
+
+// CORS対策
+const allowedOrigin = process.env.ALLOWED_ORIGIN ?? "*";
+
+export async function OPTIONS() {
+	return new NextResponse(null, {
+		status: 204,
+		headers: {
+			"Access-Control-Allow-Origin": allowedOrigin,
+			"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+			"Access-Control-Allow-Headers":
+				"Content-Type, Authorization, X-Requested-With",
+		},
+	});
+}
+
+export async function POST(req: NextRequest) {
+	const supabase = await createClient();
+
+	const {
+		supabaseAuthUserId,
+		testYearAndType,
+		mondaiFormatType,
+		subject,
+		chapter,
+		category,
+		importanceType,
+		calledFrom,
+		bookmark,
+	} = await req.json();
+
+	try {
+		// PostgreSQL配列形式に変換
+		const formatAsPostgresArray = (value: string | null) => {
+			return value ? `{${value}}` : null;
+		};
+
+		const formattedTest = formatAsPostgresArray(testYearAndType);
+		const formattedMondaiFormatType = formatAsPostgresArray(mondaiFormatType);
+		const formattedSubject = formatAsPostgresArray(subject);
+		const formattedChapter = formatAsPostgresArray(chapter);
+		const formattedCategory = formatAsPostgresArray(category);
+		const formattedImportance = formatAsPostgresArray(importanceType);
+
+		const { data, error } = await supabase.rpc(
+			"end_user_fetch_importance_and_bookmark_and_count",
+			{
+				param_supabase_auth_user_id: supabaseAuthUserId,
+				param_test: formattedTest,
+				param_mondai_format_type: formattedMondaiFormatType,
+				param_subject: formattedSubject,
+				param_chapter: formattedChapter,
+				param_category: formattedCategory,
+				param_importance: formattedImportance,
+				param_from: calledFrom,
+				param_bookmark: bookmark,
+			},
+		);
+		if (error) throw new Error(error.message);
+
+		return NextResponse.json(
+			{ data },
+			{
+				status: 200,
+				headers: {
+					"Access-Control-Allow-Origin": allowedOrigin,
+				},
+			},
+		);
+	} catch (err: unknown) {
+		const errorMessage =
+			err instanceof Error ? err.message : "Unknown error occurred";
+		return NextResponse.json(
+			{ error: errorMessage },
+			{
+				status: 500,
+				headers: {
+					"Access-Control-Allow-Origin": allowedOrigin,
+				},
+			},
+		);
+	}
+}
