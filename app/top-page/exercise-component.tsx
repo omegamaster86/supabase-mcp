@@ -1,146 +1,13 @@
 import React, { useState } from "react";
+import BookmarkSwitch from "./_components/bookmark-switch";
+import Dropdown from "./_components/dropdown";
+import FilterRadio from "./_components/filter-radio";
 
-// ドロップダウン用の汎用コンポーネント
-const SelectField = ({
-	label,
-	value,
-	options,
-	onChange,
-	disabled,
-	id,
-}: {
-	label: string;
-	value: string;
-	options: string[];
-	onChange: (v: string) => void;
-	disabled?: boolean;
-	id: string;
-}) => (
-	<div className="mb-3 flex items-center">
-		<label htmlFor={id} className="font-medium w-2/6">
-			{label}
-		</label>
-		<select
-			id={id}
-			value={value}
-			onChange={(e) => onChange(e.target.value)}
-			disabled={disabled}
-			className="w-4/6 border rounded px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100"
-		>
-			<option value="">選択してください</option>
-			{options.map((opt) => (
-				<option key={opt} value={opt}>
-					{opt}
-				</option>
-			))}
-		</select>
-	</div>
-);
-
-// ブックマークスイッチ
-const BookmarkSwitch = ({
-	checked,
-	onChange,
-	disabled,
-}: {
-	checked: boolean;
-	onChange: (v: boolean) => void;
-	disabled?: boolean;
-}) => (
-	<div className="mb-3">
-		<label className="inline-flex items-center cursor-pointer">
-			<input
-				type="checkbox"
-				checked={checked}
-				onChange={(e) => onChange(e.target.checked)}
-				disabled={disabled}
-				className="form-checkbox h-5 w-5 text-blue-600 disabled:bg-gray-100"
-			/>
-			<span className="ml-2">ブックマークした問題のみを出題</span>
-		</label>
-	</div>
-);
-
-// 出題設定ラジオ
-const FilterRadio = ({
-	value,
-	onChange,
-}: {
-	value: string;
-	onChange: (v: string) => void;
-}) => (
-	<div className="mb-3">
-		<div className="font-medium mb-3">学習記録に基づく出題設定</div>
-		<div className="flex flex-col gap-2">
-			<label className="inline-flex items-center">
-				<input
-					type="radio"
-					value="noFilter"
-					checked={value === "noFilter"}
-					onChange={() => onChange("noFilter")}
-					className="form-radio text-blue-600"
-				/>
-				<span className="ml-2">絞り込みなし</span>
-			</label>
-			<label className="inline-flex items-center">
-				<input
-					type="radio"
-					value="filterUnanswered"
-					checked={value === "filterUnanswered"}
-					onChange={() => onChange("filterUnanswered")}
-					className="form-radio text-blue-600"
-				/>
-				<span className="ml-2">まだ解いていない</span>
-			</label>
-			<label className="inline-flex items-center">
-				<input
-					type="radio"
-					value="filterLastIncorrect"
-					checked={value === "filterLastIncorrect"}
-					onChange={() => onChange("filterLastIncorrect")}
-					className="form-radio text-blue-600"
-				/>
-				<span className="ml-2">直近で不正解</span>
-			</label>
-			<label className="inline-flex items-center">
-				<input
-					type="radio"
-					value="filterUnconfidence"
-					checked={value === "filterUnconfidence"}
-					onChange={() => onChange("filterUnconfidence")}
-					className="form-radio text-blue-600"
-				/>
-				<span className="ml-2">自信なし</span>
-			</label>
-		</div>
-	</div>
-);
-
-// ダミーAPIエンドポイント
 const API = {
 	fetchInitial: async () => {
-		// 本来はfetch('/api/initial')など
 		return {
-			tests: ["中小企業診断士", "宅建士"],
+			tests: ["25中小企業診断士", "25社会保険労務士"],
 			mondaiFormatTypes: ["一問一答", "多肢択一"],
-			subjects: ["民法", "刑法"],
-			chapters: ["第1章", "第2章"],
-			categories: ["A", "B"],
-			importances: ["高", "中", "低"],
-			mondaiCounts: ["10", "20", "30"],
-			bookMarkActive: true,
-		};
-	},
-	fetchOnSelect: async (params: Record<string, string | boolean>) => {
-		// 本来はfetch('/api/on-select', { params })など
-		return {
-			mondaiFormatTypes: ["一問一答", "多肢択一"],
-			subjects: ["民法", "刑法"],
-			chapters: ["第1章", "第2章"],
-			categories: ["A", "B"],
-			importances: ["高", "中", "低"],
-			mondaiCounts: ["10", "20", "30"],
-			bookMarkActive: true,
 		};
 	},
 };
@@ -166,19 +33,71 @@ const ExerciseComponent = () => {
 	const [bookmarkOnly, setBookmarkOnly] = useState(false);
 	const [filterType, setFilterType] = useState("noFilter");
 
+	// fetchOnSelect関数をコンポーネント内に移動
+	const fetchOnSelect = async (params: Record<string, string | boolean>) => {
+		try {
+			const response = await fetch(
+				"/utils/supabase/function/end-user-fetch-importance-and-bookmark-and-count",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						testYearAndType: params.test || test || null,
+						mondaiFormatType:
+							params.mondaiFormatType || mondaiFormatType || null,
+						subject: params.subject || subject || null,
+						chapter: params.chapter || chapter || null,
+						category: params.category || category || null,
+						importanceType: params.importance || importance || null,
+						calledFrom: "exercise-component",
+						bookmark: params.bookmarkOnly || bookmarkOnly || false,
+					}),
+				},
+			);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const result = await response.json();
+
+			if (result.error) {
+				throw new Error(result.error);
+			}
+
+			// Supabase関数からのレスポンスを適切な形式に変換
+			const data = result.data;
+			return {
+				mondaiFormatTypes: data.mondai_format_types || [],
+				subjects: data.subjects || [],
+				chapters: data.chapters || [],
+				categories: data.categories || [],
+				importances: data.importances || [],
+				mondaiCounts: data.mondai_counts || [],
+				bookMarkActive: data.bookmark_active !== false,
+			};
+		} catch (error) {
+			console.error("fetchOnSelect error:", error);
+			// エラー時はデフォルト値を返す
+			return {
+				mondaiFormatTypes: [],
+				subjects: [],
+				chapters: [],
+				categories: [],
+				importances: [],
+				mondaiCounts: [],
+				bookMarkActive: false,
+			};
+		}
+	};
+
 	// 初期表示API
 	React.useEffect(() => {
-		setIsLoading(true);
 		API.fetchInitial().then((res) => {
 			setTests(res.tests);
 			setMondaiFormatTypes(res.mondaiFormatTypes);
-			setSubjects(res.subjects);
-			setChapters(res.chapters);
-			setCategories(res.categories);
-			setImportances(res.importances);
-			setMondaiCounts(res.mondaiCounts);
-			setBookMarkActive(res.bookMarkActive);
-			setIsLoading(false);
 		});
 	}, []);
 
@@ -205,7 +124,7 @@ const ExerciseComponent = () => {
 		setMondaiCount("");
 		setBookmarkOnly(false);
 		setIsLoading(true);
-		const res = await API.fetchOnSelect({ test: v });
+		const res = await fetchOnSelect({ test: v });
 		setMondaiFormatTypes(res.mondaiFormatTypes);
 		setSubjects(res.subjects);
 		setChapters(res.chapters);
@@ -224,7 +143,7 @@ const ExerciseComponent = () => {
 		setMondaiCount("");
 		setBookmarkOnly(false);
 		setIsLoading(true);
-		const res = await API.fetchOnSelect({ test, mondaiFormatType: v });
+		const res = await fetchOnSelect({ test, mondaiFormatType: v });
 		setSubjects(res.subjects);
 		setChapters(res.chapters);
 		setCategories(res.categories);
@@ -241,7 +160,7 @@ const ExerciseComponent = () => {
 		setMondaiCount("");
 		setBookmarkOnly(false);
 		setIsLoading(true);
-		const res = await API.fetchOnSelect({ test, mondaiFormatType, subject: v });
+		const res = await fetchOnSelect({ test, mondaiFormatType, subject: v });
 		setChapters(res.chapters);
 		setCategories(res.categories);
 		setImportances(res.importances);
@@ -256,7 +175,7 @@ const ExerciseComponent = () => {
 		setMondaiCount("");
 		setBookmarkOnly(false);
 		setIsLoading(true);
-		const res = await API.fetchOnSelect({
+		const res = await fetchOnSelect({
 			test,
 			mondaiFormatType,
 			subject,
@@ -274,7 +193,7 @@ const ExerciseComponent = () => {
 		setMondaiCount("");
 		setBookmarkOnly(false);
 		setIsLoading(true);
-		const res = await API.fetchOnSelect({
+		const res = await fetchOnSelect({
 			test,
 			mondaiFormatType,
 			subject,
@@ -291,7 +210,7 @@ const ExerciseComponent = () => {
 		setMondaiCount("");
 		setBookmarkOnly(false);
 		setIsLoading(true);
-		const res = await API.fetchOnSelect({
+		const res = await fetchOnSelect({
 			test,
 			mondaiFormatType,
 			subject,
@@ -307,7 +226,7 @@ const ExerciseComponent = () => {
 		setBookmarkOnly(v);
 		setMondaiCount("");
 		setIsLoading(true);
-		const res = await API.fetchOnSelect({
+		const res = await fetchOnSelect({
 			test,
 			mondaiFormatType,
 			subject,
@@ -325,7 +244,7 @@ const ExerciseComponent = () => {
 			<div className="mb-4 font-bold">＊全て必須項目です</div>
 			<div className="mb-4 font-bold">問題を絞り込む</div>
 			{isLoading && <div className="mb-2 text-blue-500">読み込み中...</div>}
-			<SelectField
+			<Dropdown
 				label="試験種"
 				id="test-type"
 				value={test}
@@ -333,7 +252,7 @@ const ExerciseComponent = () => {
 				onChange={handleTestChange}
 				disabled={false}
 			/>
-			<SelectField
+			<Dropdown
 				label="問題タイプ"
 				id="mondai-type"
 				value={mondaiFormatType}
@@ -341,7 +260,7 @@ const ExerciseComponent = () => {
 				onChange={handleMondaiFormatTypeChange}
 				disabled={isFormatDisabled}
 			/>
-			<SelectField
+			<Dropdown
 				label="科目"
 				id="subject"
 				value={subject}
@@ -349,7 +268,7 @@ const ExerciseComponent = () => {
 				onChange={handleSubjectChange}
 				disabled={isSubjectDisabled}
 			/>
-			<SelectField
+			<Dropdown
 				label="章"
 				id="chapter"
 				value={chapter}
@@ -357,7 +276,7 @@ const ExerciseComponent = () => {
 				onChange={handleChapterChange}
 				disabled={isChapterDisabled}
 			/>
-			<SelectField
+			<Dropdown
 				label="カテゴリ"
 				id="category"
 				value={category}
@@ -365,7 +284,7 @@ const ExerciseComponent = () => {
 				onChange={handleCategoryChange}
 				disabled={isCategoryDisabled}
 			/>
-			<SelectField
+			<Dropdown
 				label="重要度"
 				id="importance"
 				value={importance}
@@ -373,7 +292,7 @@ const ExerciseComponent = () => {
 				onChange={handleImportanceChange}
 				disabled={isImportanceDisabled}
 			/>
-			<SelectField
+			<Dropdown
 				label="問題数"
 				id="mondai-count"
 				value={mondaiCount}
@@ -387,13 +306,39 @@ const ExerciseComponent = () => {
 				disabled={isBookmarkDisabled}
 			/>
 			{mondaiFormatType === "多肢択一" && (
-				<FilterRadio value={filterType} onChange={setFilterType} />
+				<>
+					<div className="font-medium mb-3">学習記録に基づく出題設定</div>
+					<FilterRadio
+						optionValue="noFilter"
+						selectedValue={filterType}
+						onChange={(v) => setFilterType(v)}
+						label="絞り込みなし"
+					/>
+					<FilterRadio
+						optionValue="filterUnanswered"
+						selectedValue={filterType}
+						onChange={(v) => setFilterType(v)}
+						label="まだ解いていない"
+					/>
+					<FilterRadio
+						optionValue="filterLastIncorrect"
+						selectedValue={filterType}
+						onChange={(v) => setFilterType(v)}
+						label="直近で不正解"
+					/>
+					<FilterRadio
+						optionValue="filterUnconfidence"
+						selectedValue={filterType}
+						onChange={(v) => setFilterType(v)}
+						label="自信なし"
+					/>
+				</>
 			)}
 			<div className="flex justify-center items-center">
 				<button
 					type="button"
 					disabled={!canStart}
-					className="mt-4 px-8 py-2 font-bold rounded-full bg-blue-600 text-white disabled:bg-gray-300"
+					className="px-8 py-2 font-bold rounded-full bg-blue-600 text-white disabled:bg-gray-300"
 				>
 					テストを開始
 				</button>
